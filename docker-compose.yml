@@ -1,0 +1,168 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Gluetun — VPN gateway (ProtonVPN via WireGuard). qBittorrent routes through
+  # this container's network. If Gluetun dies, qBittorrent loses all network =
+  # no IP leak.
+  # ---------------------------------------------------------------------------
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8080:8080"   # qBittorrent WebUI (exposed here because qbit shares this netns)
+      - "6881:6881"   # torrent TCP
+      - "6881:6881/udp"
+    volumes:
+      - ./config/gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      # Get key from ProtonVPN: Account > WireGuard configuration. Paste private key.
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      # Optional: pin to specific country/server. Leave blank for auto.
+      - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES:-Netherlands}
+      # ProtonVPN port forwarding (paid plan). Lets peers connect = better seeding.
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
+      # Push the forwarded port into qBittorrent's listen_port automatically,
+      # since ProtonVPN assigns a new port on every reconnect. Requires
+      # qBittorrent's "bypass auth for localhost" WebUI setting to be on
+      # (qbittorrent shares this container's network namespace).
+      - VPN_PORT_FORWARDING_UP_COMMAND=/gluetun/port-sync.sh {{PORTS}}
+      - TZ=${TZ:-America/New_York}
+      # Firewall: only allow LAN to reach WebUI. Adjust subnet to your LAN.
+      - FIREWALL_OUTBOUND_SUBNETS=${LAN_SUBNET:-192.168.1.0/24}
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # qBittorrent — shares Gluetun network namespace. NO own ports/networks.
+  # All traffic exits via VPN. Reach WebUI at http://<host>:8080
+  # ---------------------------------------------------------------------------
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${MEDIA_ROOT:-./data}/torrents:/data/torrents
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # FlareSolverr — solves Cloudflare challenges for indexers that need it
+  # (e.g. 1337x, Pirate Bay). Configure as an Indexer Proxy in Prowlarr
+  # pointing at http://flaresolverr:8191/
+  # ---------------------------------------------------------------------------
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ:-America/New_York}
+    ports:
+      - "8191:8191"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Prowlarr — indexer manager. Feeds Radarr/Sonarr.
+  # ---------------------------------------------------------------------------
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Radarr — movies.
+  # ---------------------------------------------------------------------------
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/radarr:/config
+      - ${MEDIA_ROOT:-./data}:/data
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Sonarr — TV.
+  # ---------------------------------------------------------------------------
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      - ./config/sonarr:/config
+      - ${MEDIA_ROOT:-./data}:/data
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Jellyfin — media server. Hardware transcode via /dev/dri (Intel QSV / VAAPI).
+  # Remove devices block if no iGPU.
+  # ---------------------------------------------------------------------------
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/New_York}
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-http://192.168.1.10:8096}
+    volumes:
+      - ./config/jellyfin:/config
+      - ${MEDIA_ROOT:-./data}/media:/data/media
+    ports:
+      - "8096:8096"     # HTTP
+      - "8920:8920"     # HTTPS (optional)
+      - "7359:7359/udp" # client auto-discovery
+      - "1900:1900/udp" # DLNA
+    devices:
+      - /dev/dri:/dev/dri   # Intel/AMD iGPU passthrough. Remove if none.
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # AdGuard Home — DNS + ad/porn/content blocking. Binds host port 53.
+  # MUST free port 53 first (systemd-resolved). See README notes.
+  # First-run setup wizard on :3000, then admin moves to :80.
+  # ---------------------------------------------------------------------------
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    volumes:
+      - ./config/adguard/work:/opt/adguardhome/work
+      - ./config/adguard/conf:/opt/adguardhome/conf
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"       # optional DHCP
+      - "3000:3000/tcp"   # initial setup wizard
+      - "8081:80/tcp"     # admin UI after setup (host 8081 -> avoids clashes)
+      - "853:853/tcp"     # DNS-over-TLS (optional)
+    restart: unless-stopped

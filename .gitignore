@@ -1,0 +1,37 @@
+# Real secrets — never commit
+.env
+
+# Live app state (databases, caches, logs, WireGuard server lists, etc.)
+# Directory structure is preserved via .gitkeep; contents are machine-specific.
+config/gluetun/*
+!config/gluetun/.gitkeep
+!config/gluetun/port-sync.sh
+
+config/qbittorrent/*
+!config/qbittorrent/.gitkeep
+
+config/prowlarr/*
+!config/prowlarr/.gitkeep
+
+config/radarr/*
+!config/radarr/.gitkeep
+
+config/sonarr/*
+!config/sonarr/.gitkeep
+
+config/jellyfin/*
+!config/jellyfin/.gitkeep
+
+config/adguard/conf/*
+!config/adguard/conf/.gitkeep
+
+config/adguard/work/*
+!config/adguard/work/.gitkeep
+
+data/torrents/*
+!data/torrents/.gitkeep
+
+data/media/*
+!data/media/.gitkeep
+
+docker-compose.log
