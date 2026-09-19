@@ -1,3 +1,11 @@
+# Explicit upstream DNS for containers on the compose network. Without it,
+# Docker copies the host's resolv.conf at container start; if the containers
+# come up before the host's DNS does (e.g. on boot), they end up with no
+# upstream resolver and every lookup fails until they're restarted.
+x-dns: &dns
+  dns:
+    - ${CONTAINER_DNS:-1.1.1.1}
+
 services:
   # ---------------------------------------------------------------------------
   # Gluetun — VPN gateway (ProtonVPN via WireGuard). qBittorrent routes through
@@ -66,6 +74,7 @@ services:
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
+    <<: *dns
     environment:
       - LOG_LEVEL=info
       - TZ=${TZ:-America/New_York}
@@ -79,6 +88,7 @@ services:
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
+    <<: *dns
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -95,6 +105,7 @@ services:
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
+    <<: *dns
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -112,6 +123,7 @@ services:
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
+    <<: *dns
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
@@ -130,6 +142,7 @@ services:
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
+    <<: *dns
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
