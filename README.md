@@ -13,8 +13,10 @@ My media stack: Gluetun (ProtonVPN) + qBittorrent, Prowlarr, FlareSolverr, Radar
 3. `docker compose up -d`
 4. One-time setup per machine (this is app state, not stored in this repo):
    - **Prowlarr** (`:9696`) — add indexers, add FlareSolverr as an indexer proxy (`http://flaresolverr:8191/`), connect Radarr/Sonarr as apps.
-   - **Radarr/Sonarr** (`:7878` / `:8989`) — add root folders under `/data`, add qBittorrent as a download client (host `gluetun`, port `8080`).
-   - **qBittorrent** (`:8080`) — enable "Bypass authentication for clients on localhost" in WebUI settings, so `port-sync.sh` can push the forwarded VPN port automatically.
+   - **Radarr/Sonarr** (`:7878` / `:8989`) — add root folders under `/data`, add qBittorrent as a download client (host `gluetun`, port `8080`). On the qBittorrent client, leave **Remove Completed** on (Settings > Download Clients), so finished torrents are cleaned up after import.
+   - **qBittorrent** (`:8080`) — enable "Bypass authentication for clients on localhost" in WebUI settings, so `port-sync.sh` can push the forwarded VPN port automatically. Also set:
+     - Options > Downloads: **untick "Keep incomplete torrents in"**, and set Default Save Path to `/data/torrents`. (With the temp path on, removed or stalled torrents leave full-size files stranded in `torrents/incomplete`, where Sonarr/Radarr never import them. This once ate ~240G.)
+     - Options > BitTorrent: set a seeding limit (ratio/time) with action **Remove torrent**, so finished torrents don't accumulate.
    - **Jellyfin** (`:8096`) — run the setup wizard, add `/data/media` as a library.
    - **AdGuard Home** — setup wizard on `:3000`, admin UI after that on `:8081`. Needs port 53 free on the host (stop `systemd-resolved`'s stub listener if it's holding it).
 
@@ -22,6 +24,8 @@ My media stack: Gluetun (ProtonVPN) + qBittorrent, Prowlarr, FlareSolverr, Radar
 
 - `config/` and `data/` are gitignored except for `.gitkeep`s and `port-sync.sh` — everything else in there is per-machine app state (databases, caches, downloaded media), not setup worth versioning.
 - `port-sync.sh` is what Gluetun calls whenever ProtonVPN hands out a new forwarded port; it pushes that port into qBittorrent so seeding keeps working after a VPN reconnect.
+- Keep `MEDIA_ROOT` on a single filesystem. Sonarr/Radarr import by hardlink from `torrents/` into `media/`, so a seeding file costs no extra space. Splitting them across disks turns every import into a full copy.
+- If the disk fills up, check `du -h --max-depth=2 $MEDIA_ROOT/torrents | sort -rh | head` first. Files with a hardlink count of 1 (`find torrents -type f -links 1`) were never imported.
 - Jellyfin mounts `/dev/dri` for hardware transcoding, assuming an Intel/AMD iGPU. Drop that line from `docker-compose.yml` on a machine without one.
 
 ## Running it as a systemd service (optional)
