@@ -24,7 +24,7 @@ services:
       - "6881:6881"   # torrent TCP
       - "6881:6881/udp"
     volumes:
-      - ./config/gluetun:/gluetun
+      - ${CONFIG_ROOT:-./config}/gluetun:/gluetun
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
@@ -62,7 +62,7 @@ services:
       - TZ=${TZ:-America/New_York}
       - WEBUI_PORT=8080
     volumes:
-      - ./config/qbittorrent:/config
+      - ${CONFIG_ROOT:-./config}/qbittorrent:/config
       - ${MEDIA_ROOT:-./data}/torrents:/data/torrents
     restart: unless-stopped
 
@@ -94,7 +94,7 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-America/New_York}
     volumes:
-      - ./config/prowlarr:/config
+      - ${CONFIG_ROOT:-./config}/prowlarr:/config
     ports:
       - "9696:9696"
     restart: unless-stopped
@@ -111,7 +111,7 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-America/New_York}
     volumes:
-      - ./config/radarr:/config
+      - ${CONFIG_ROOT:-./config}/radarr:/config
       - ${MEDIA_ROOT:-./data}:/data
     ports:
       - "7878:7878"
@@ -129,7 +129,7 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-America/New_York}
     volumes:
-      - ./config/sonarr:/config
+      - ${CONFIG_ROOT:-./config}/sonarr:/config
       - ${MEDIA_ROOT:-./data}:/data
     ports:
       - "8989:8989"
@@ -149,7 +149,7 @@ services:
       - TZ=${TZ:-America/New_York}
       - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL:-http://192.168.1.10:8096}
     volumes:
-      - ./config/jellyfin:/config
+      - ${CONFIG_ROOT:-./config}/jellyfin:/config
       - ${MEDIA_ROOT:-./data}/media:/data/media
     ports:
       - "8096:8096"     # HTTP
@@ -169,8 +169,8 @@ services:
     image: adguard/adguardhome:latest
     container_name: adguardhome
     volumes:
-      - ./config/adguard/work:/opt/adguardhome/work
-      - ./config/adguard/conf:/opt/adguardhome/conf
+      - ${CONFIG_ROOT:-./config}/adguard/work:/opt/adguardhome/work
+      - ${CONFIG_ROOT:-./config}/adguard/conf:/opt/adguardhome/conf
     ports:
       - "53:53/tcp"
       - "53:53/udp"
