@@ -1,0 +1,11 @@
+# Installed by `./install.sh das`. Reads every block on the DAS and repairs
+# bad copies from the RAID1 mirror. Results: `sudo btrfs scrub status @STORAGE_ROOT@`.
+[Unit]
+Description=Scrub the DAS btrfs filesystem
+RequiresMountsFor=@STORAGE_ROOT@
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/btrfs scrub start -B @STORAGE_ROOT@
+Nice=19
+IOSchedulingClass=idle

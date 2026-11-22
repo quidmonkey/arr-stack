@@ -1,0 +1,14 @@
+# Regenerates the NVIDIA CDI spec on every boot. Bazzite image updates ship
+# new drivers, and a stale spec points containers at libraries that no longer
+# exist, which breaks Jellyfin's NVENC.
+[Unit]
+Description=Generate NVIDIA CDI spec for containers
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+[Install]
+WantedBy=multi-user.target

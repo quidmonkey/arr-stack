@@ -22,11 +22,10 @@ config/sonarr/*
 config/jellyfin/*
 !config/jellyfin/.gitkeep
 
-config/adguard/conf/*
-!config/adguard/conf/.gitkeep
-
-config/adguard/work/*
-!config/adguard/work/.gitkeep
+# Created by install.sh stack, no .gitkeep needed.
+config/immich/
+config/navidrome/
+config/audiobookshelf/
 
 data/torrents/*
 !data/torrents/.gitkeep

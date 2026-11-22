@@ -1,0 +1,20 @@
+# Installed by `./install.sh stack`, which fills in the @...@ placeholders.
+# Brings the rootful Podman stack up on boot, once the DAS is mounted and the
+# NVIDIA CDI spec matches the running driver.
+[Unit]
+Description=Media stack (podman-compose)
+Wants=network-online.target
+After=network-online.target nvidia-cdi-generate.service
+Requires=nvidia-cdi-generate.service
+RequiresMountsFor=@STORAGE_ROOT@
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=@REPO_DIR@
+ExecStart=@PODMAN_COMPOSE@ up -d
+ExecStop=@PODMAN_COMPOSE@ down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
