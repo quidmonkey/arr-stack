@@ -4,28 +4,15 @@ This turns Nautilus (Ryzen 7 5800X3D, RTX 4070 Ti, ASUS TUF Gaming X570-Plus) in
 
 AdGuard Home isn't here. It moves to the Firebat (see that repo's `next-steps.md` item 15). Do that before retiring the Intel Mini, because the Mini is the network's DNS until then.
 
-The order: you do the BIOS, the Bazzite install, the clone, and installing Claude. Then you start Claude in this repo and ask it to follow this file. Steps marked **(you)** need a person: a screen, a password, a login in a browser, or a decision. Claude should stop and ask at each one. Everything else is `./install.sh`, which is safe to re-run. `./install.sh check` shows what's done at any point.
+The order: the BIOS is already done; you do the Bazzite install, the clone, and installing Claude. Then you start Claude in this repo and ask it to follow this file. Steps marked **(you)** need a person: a screen, a password, a login in a browser, or a decision. Claude should stop and ask at each one. Everything else is `./install.sh`, which is safe to re-run. `./install.sh check` shows what's done at any point.
 
-## 0. Before wiping Windows (you)
+## 1. BIOS (done 2026-11-21)
 
-Installing Bazzite erases the NVMe, and Windows currently uses about 1.2 TB of it. Copy off anything you want to keep: save files that aren't in the cloud, screenshots, and the Moonlight/Sunshine and Parsec settings if you care about them. Steam games can be re-downloaded. You can back up the Steam library folder to save bandwidth, but Windows game files don't help much on Linux anyway.
+Nothing to do here. These settings are listed so they can be put back if the BIOS is ever reset (press **Del** at boot, then **F7** for Advanced Mode):
 
-## 1. BIOS (you)
-
-Press **Del** during boot to enter the BIOS. If it opens in EZ Mode, press **F7** for Advanced Mode.
-
-**Memory speed (DOCP).** The RAM is running at 2133 MT/s, but the kit (Corsair CMW32GX4M2C3200C16) is rated 3200.
-1. **Ai Tweaker** tab > **Ai Overclock Tuner** > **D.O.C.P.**
-2. In the **D.O.C.P.** row that appears below it, pick the 3200 profile (DDR4-3200 16-18-18-36, 1.35V).
-3. Leave everything else on Auto. **F10** saves and reboots.
-
-The first boot after this can take a minute and may restart once while the memory retrains. That's normal. If it doesn't come back, the board resets to safe settings after a few failed tries. Then check the slots (below), and try DOCP again.
-
-**Check which slots the RAM is in.** Windows reported the sticks in **DIMM_A1 and DIMM_A2**, which are both on channel A. If that's right, the memory is running in single-channel mode, and that costs more performance than the missing DOCP. ASUS's manual for this board says two sticks go in **A2 and B2**: the second and fourth slots counting from the CPU. With the PC unplugged, look at the slot labels printed on the board. If the sticks are next to each other, move one over. In Bazzite, `sudo dmidecode -t memory | grep -E 'Locator|Configured Memory Speed'` shows the slots and speed.
-
-**Other settings:**
-- Advanced > APM Configuration > **Restore AC Power Loss: Power On**. It's a server now, so it should come back by itself after a power cut.
-- Advanced > APM Configuration > **ErP Ready: Disabled**, or the power-loss setting above doesn't work.
+- Ai Tweaker > Ai Overclock Tuner: **D.O.C.P.**, DDR4-3200 profile. RAM in slots **A2 and B2** (second and fourth from the CPU) for dual-channel.
+- Advanced > APM Configuration > **Restore AC Power Loss: Power On**, so the server comes back by itself after a power cut.
+- Advanced > APM Configuration > **ErP Ready: Disabled**, or the power-loss setting doesn't work.
 - Boot > Secure Boot can stay on. Bazzite asks you to enroll its key on first boot (next section).
 
 ## 2. Install Bazzite (you)
